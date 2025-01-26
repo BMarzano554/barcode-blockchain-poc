@@ -105,7 +105,19 @@ COPY requirements.txt .
 RUN pip install -r requirements.txt
 COPY app.py .
 CMD ["python", "app.py"]
-  
+
+    class StateChannel:
+      def __init__(self, party_a, party_b, deposit):
+          self.balances = {party_a: deposit // 2, party_b: deposit // 2}
+          self.nonce = 0
+
+      def update(self, payer, payee, amount):
+          self.balances[payer] -= amount
+          self.balances[payee] += amount
+          self.nonce += 1
+
+      def close(self, final_balance_proof):
+          return final_balance_proof
 phase3/
 ├── quantum/
 │   └── dilithium_signer.py
