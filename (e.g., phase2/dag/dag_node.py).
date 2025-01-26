@@ -1,0 +1,124 @@
+File 1: phase2/dag/dag_node.py
+
+
+• File Name: phase2/dag/
+dag_node.py
+class DAGNode:
+      def __init__(self, tx_data, parent_hashes):
+          self.tx_data = tx_data
+          self.parent_hashes = parent_hashes
+          self.tx_hash = self.calculate_hash()
+
+      def calculate_hash(self):
+          import hashlib
+          data = str(self.tx_data) + str(self.parent_hashes)
+          return hashlib.sha256(data.encode()).hexdigest()
+
+  class DAGLedger:
+      def __init__(self):
+          self.nodes = {}
+          self.tips = []
+
+      def add_transaction(self, tx_data):
+          new_node = DAGNode(tx_data, self.tips)
+          self.nodes[new_node.tx_hash] = new_node
+          self.tips = [new_node.tx_hash]
+          return new_node.tx_hash
+          2:phase2/quantum/
+sphincs.py
+
+
+• File Name: phase2/quantum/
+sphincs.py
+from sphincs import Sphincs
+
+  class QuantumSigner:
+      def __init__(self):
+          self.private_key = Sphincs.generate_key()
+          self.public_key = self.private_key.public_key()
+
+      def sign_transaction(self, tx_hash):
+          return self.private_key.sign(tx_hash.encode())
+
+      @staticmethod
+      def verify_signature(public_key, tx_hash, signature):
+          return public_key.verify(tx_hash.encode(), signature)
+          File 3: phase2/bridge/
+quantum_bridge.py
+
+
+• File Name: phase2/bridge/
+quantum_bridge.py
+from ..bridge.bridge_contract import Bridge
+  from .htlc_contract import HTLC
+
+  class QuantumBridge(Bridge):
+      def __init__(self):
+          super().__init__()
+          self.htlc = HTLC()
+
+      def atomic_swap(self, amount, secret_hash, recipient):
+          self.locked_btc += amount
+          self.htlc.create_contract(secret_hash, recipient, amount)
+
+      def redeem_swap(self, secret):
+          if self.htlc.verify_secret(secret):
+              self.locked_btc -= self.htlc.amount
+              return True
+          return False
+          File 4: phase2/circuits/
+plonk_rollup.circom
+
+
+• File Name: phase2/circuits/
+plonk_rollup.circom
+pragma circom 2.1.0;
+  include "node_modules/circomlib/circuits/poseidon.circom";
+
+  template PLONKRollup() {
+      signal input txsHash;
+      signal input oldStateHash;
+      signal output newStateHash;
+
+      component poseidon = Poseidon(2);
+      poseidon.inputs[0] <== oldStateHash;
+      poseidon.inputs[1] <== txsHash;
+      newStateHash <== poseidon.out;
+  }
+
+  component main = PLONKRollup();
+  phase2/bridge/
+htlc_contract.py
+
+
+• File Name: phase2/bridge/
+htlc_contract.py
+class HTLC:
+      def __init__(self):
+          self.contracts = {}
+
+      def create_contract(self, secret_hash, recipient, amount):
+          self.contracts[secret_hash] = (recipient, amount)
+
+      def verify_secret(self, secret):
+          import hashlib
+          secret_hash = hashlib.sha256(secret.encode()).hexdigest()
+          if secret_hash in self.contracts:
+              del self.contracts[secret_hash]
+              return True
+          return False
+          File 6: Update requirements
+
+
+txt
+
+
+• File Name: requirements
+
+
+txt
+# Phase 2 Dependencies
+  sphincs==0.5.2
+  circomlib==0.0.8
+  
+  
